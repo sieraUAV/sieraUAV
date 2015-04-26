@@ -55,14 +55,17 @@ def initHexa():
 def Mission():
 
 	# Change MODE --> AUTO
-	vehicle.mode    = VehicleMode("AUTO")
+	v.mode    = VehicleMode("STABILIZE")
 
 	#ARME HEXA
 	print "Arming..."
 	v.armed = True
 	v.flush()
 
-	while not vehicle.armed and not api.exit:
+	# Change MODE --> AUTO
+	v.mode    = VehicleMode("AUTO")
+
+	while not v.armed and not api.exit:
 		print "Waiting for arming..."
 		time.sleep(1)
 
@@ -74,7 +77,7 @@ def main():
 	initHexa()
 
 	#TIME BEFORE MISSION LAUNCH
-	print "lancement de la mission dans 10 seconde"
+	print "lancement de la mission dans 10 secondes"
 	i=10
 	while i>0:
 		print ("Mission dans: %d" % i)
