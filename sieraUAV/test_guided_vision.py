@@ -133,14 +133,24 @@ DURATION=10
 
 #Mission start
 def mission():
+    global QueueVideo
     init_api()
     #Takeoff
-    arm_and_takeoff()
+    #arm_and_takeoff()
 
-    # Square path
-    print("Going North & up")
+    #Attente de detection objet
+    boolVideoDet=False
+    while not boolVideoDet:
+        while not QueueVideo.empty():
+            boolVideoDet= (QueueVideo.get()=='DETECT')
+
+    print "Oject detected"
+
+    vehicle.mode    = VehicleMode("LOITER")
+
+    print("Going North ")
     condition_yaw(0)
-    send_nav_velocity(NORTH,0,UP)
+    send_nav_velocity(NORTH,0,0)
     time.sleep(DURATION)
     send_nav_velocity(0,0,0)
 
@@ -158,8 +168,10 @@ def mission():
 threadCV = myThread(1, "threadCV",videoThread)
 
 #start thread
-threadCV.start();
-
+threadCV.start()
+#Conect to api drone mavproxy
 init_api()
-
+#Execute mission
 mission()
+#Attente fin thread video
+threadCV.join()

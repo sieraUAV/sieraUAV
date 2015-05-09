@@ -4,9 +4,11 @@ import time
 import Image
 import numpy as np
 import threading
+import Queue
 
 
 exitFlag = 0
+QueueVideo=Queue.Queue(10)
 
 #THREAD CLASS DEF
 class myThread (threading.Thread):
@@ -139,13 +141,12 @@ def videoThread():
         #trie des contour filtre par aire les plus grandre
         cnt_filt.sort(reverse=True)
 
-        print "TAB FILT"
-
         #print cnt_filt
-
         if len(cnt_filt)>0:
             cv2.circle(img,cnt_filt[0][1],4,(255,0,0),-1)                
             cv2.drawContours(img,[cnt_filt[0][2]],0,(0,255,0),2)
+            #Put item in queue
+            QueueVideo.put('DETECT')
                      
          
         #TEST ACTION
