@@ -24,7 +24,7 @@ class myThread (threading.Thread):
 
  
 #FONCTION TOUCHE
-def toucheAction(delai=10):
+def toucheAction(delai=50):
      
     flag=False   
     """
@@ -62,7 +62,7 @@ def videoThread():
     cv2.startWindowThread()
 
     #CONFIG CAPTURE
-    capture=cv2.VideoCapture(0)
+    capture=cv2.VideoCapture(1)
      
     #CONFIG CAPTURE VIDEO
     w=int(capture.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH ))
@@ -145,6 +145,9 @@ def videoThread():
         if len(cnt_filt)>0:
             cv2.circle(img,cnt_filt[0][1],4,(255,0,0),-1)                
             cv2.drawContours(img,[cnt_filt[0][2]],0,(0,255,0),2)
+
+            if QueueVideo.full():
+                QueueVideo.get()
             #Put item in queue
             QueueVideo.put('DETECT')
                      
