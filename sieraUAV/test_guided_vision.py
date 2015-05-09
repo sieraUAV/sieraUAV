@@ -6,6 +6,7 @@ from pymavlink import mavutil
 import cv2
 import numpy as np
 import sys
+
 sys.path.append('./')
 from video_th import *
 
@@ -27,7 +28,7 @@ def arm_and_takeoff():
     # but fine for experimenting in the simulator.
 
     print "Waiting for GPS..."
-    while vehicle.gps_0.fix_type < 2:
+    while vehicle.gps_0.fix_type < 3:
         # gps_0.fix_type:
         # 0-1: no fix
         # 2: 2D fix, 3: 3D fix, 4: DGPS, 5: RTK
@@ -136,7 +137,7 @@ def mission():
     global QueueVideo
     init_api()
     #Takeoff
-    #arm_and_takeoff()
+    arm_and_takeoff()
 
     #Attente de detection objet
     boolVideoDet=False
@@ -164,6 +165,7 @@ def mission():
 # except:
 #    print "Error: unable to start thread"
 
+
 #Create thread
 threadCV = myThread(1, "threadCV",videoThread)
 
@@ -171,7 +173,13 @@ threadCV = myThread(1, "threadCV",videoThread)
 threadCV.start()
 #Conect to api drone mavproxy
 init_api()
+
 #Execute mission
 mission()
+
 #Attente fin thread video
+while threadCV.is_alive():
+    print vehicle.mode
+    time.sleep(1)
+
 threadCV.join()
