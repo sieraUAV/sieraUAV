@@ -24,7 +24,7 @@ class myThread (threading.Thread):
 
  
 #FONCTION TOUCHE
-def toucheAction(delai=50):
+def toucheAction(delai=10):
      
     flag=False   
     """
@@ -33,10 +33,16 @@ def toucheAction(delai=50):
     'ESC' --> quitte le programe
     'g' --> demarre ou arrete la capture
     """
-    save=1048691
-    esp=1048603
-    video=1048679
-     
+    #conf 1
+    #save=1048691
+    #esp=1048603
+    #video=1048679
+
+    #conf 2
+    save=115
+    esp=27
+    video=118
+
     k = cv2.waitKey(delai)
     
     if k!=-1:
@@ -64,7 +70,7 @@ def videoThread():
     cv2.startWindowThread()
 
     #CONFIG CAPTURE
-    capture=cv2.VideoCapture(0)
+    capture=cv2.VideoCapture(1)
      
     #CONFIG CAPTURE VIDEO
     w=int(capture.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH ))
