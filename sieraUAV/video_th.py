@@ -36,12 +36,7 @@ def toucheAction(delai=10):
     'ESC' --> quitte le programe
     'g' --> demarre ou arrete la capture
     """
-<<<<<<< HEAD
-    save=115
-    esp=27
-    video=118
-     
-=======
+
     #conf 1
     #save=1048691
     #esp=1048603
@@ -52,7 +47,6 @@ def toucheAction(delai=10):
     esp=27
     video=118
 
->>>>>>> 44e05713f972f39d512c59280b58a2a75bc9e960
     k = cv2.waitKey(delai)
     
     if k!=-1:
@@ -119,8 +113,8 @@ IMAGE PROSSESSING
 def videoThread():
     #INIT WINDOW
     cv2.namedWindow("Composed", cv2.CV_WINDOW_AUTOSIZE)
-    cv2.namedWindow("img", cv2.CV_WINDOW_AUTOSIZE)
-    cv2.namedWindow("imageHSV_hist", cv2.CV_WINDOW_AUTOSIZE)
+    #cv2.namedWindow("img", cv2.CV_WINDOW_AUTOSIZE)
+    #cv2.namedWindow("imageHSV_hist", cv2.CV_WINDOW_AUTOSIZE)
     cv2.startWindowThread()
 
     #CONFIG CAPTURE
@@ -176,13 +170,9 @@ def videoThread():
         imageHSV_hist = cv2.cvtColor(imageHSV, cv2.COLOR_HSV2BGR)
      
         #thresholding
-<<<<<<< HEAD
         min_red = np.array((0. ,100. ,60. ))
         max_red = np.array((7. ,255. ,255. ))
-=======
-        min_red = np.array((0. ,80. ,60. ))
-        max_red = np.array((12. ,255. ,255. ))
->>>>>>> 44e05713f972f39d512c59280b58a2a75bc9e960
+
          
         min_red2 = np.array((170. ,80. ,60. ))
         max_red2 = np.array((180. ,255. ,255. ))
@@ -234,7 +224,6 @@ def videoThread():
                         cv2.line(img,barycentre,barycentre_2,[255,255,255],1)
                         #register info 
                         cnt_filt.append((CurrAera, barycentre, barycentre_2, hull))
-                        centre=(int(w*0.5),int(h*0.5))
 
 
 
@@ -251,8 +240,8 @@ def videoThread():
             cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
 
             (a,b)=cnt_filt[0][2]
-            ptx=(a,int(h*0.5))
-            pty=(int(w*0.5),b)
+            ptx=(a,rows/2)
+            pty=(cols/2,b)
             cv2.line(img,cnt_filt[0][2],ptx,[0,0,255],1)
             cv2.line(img,cnt_filt[0][2],pty,[0,0,255],1)
 
@@ -260,7 +249,7 @@ def videoThread():
 
 
 
-            distances=interdistance(cnt_filt[0][1],w,h)
+            distances=interdistance(cnt_filt[0][1],cols,rows)
             #print distances, yaw
             cv2.drawContours(img,[cnt_filt[0][3]],0,(0,255,0),2)
             
@@ -299,13 +288,13 @@ def videoThread():
             out.write(compoImage)
          
         #AFFICHAGE# separer les couleurs
-        cv2.imshow("imageHSV_hist", imageHSV_hist)
+        #cv2.imshow("imageHSV_hist", imageHSV_hist)
         #cv2.imshow("imgThresh", imgThresh)
         #cv2.imshow("imgThresh2", imgThresh2)
         #cv2.imshow("imgThreshT", imgThreshT)
         #cv2.imshow("cont", cont)
         #cv2.imshow("canny", canny)
-        cv2.imshow("img", img)
+        #cv2.imshow("img", img)
         #cv2.imshow("closing", closing)
         cv2.imshow("Composed", compoImage)
      
