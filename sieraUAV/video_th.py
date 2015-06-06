@@ -27,7 +27,7 @@ class myThread (threading.Thread):
 
  
 #FONCTION TOUCHE
-def toucheAction(delai=50):
+def toucheAction(delai=10):
      
     flag=False   
     """
@@ -36,10 +36,23 @@ def toucheAction(delai=50):
     'ESC' --> quitte le programe
     'g' --> demarre ou arrete la capture
     """
+<<<<<<< HEAD
     save=115
     esp=27
     video=118
      
+=======
+    #conf 1
+    #save=1048691
+    #esp=1048603
+    #video=1048679
+
+    #conf 2
+    save=115
+    esp=27
+    video=118
+
+>>>>>>> 44e05713f972f39d512c59280b58a2a75bc9e960
     k = cv2.waitKey(delai)
     
     if k!=-1:
@@ -106,6 +119,8 @@ IMAGE PROSSESSING
 def videoThread():
     #INIT WINDOW
     cv2.namedWindow("Composed", cv2.CV_WINDOW_AUTOSIZE)
+    cv2.namedWindow("img", cv2.CV_WINDOW_AUTOSIZE)
+    cv2.namedWindow("imageHSV_hist", cv2.CV_WINDOW_AUTOSIZE)
     cv2.startWindowThread()
 
     #CONFIG CAPTURE
@@ -146,12 +161,30 @@ def videoThread():
          
         #HSV
         imageHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        #NORMALISATEUR DE LUMINOSITE
+        # separer les valeurs
+        h,s,v = cv2.split(imageHSV)
+        # Calcul de moyenne sur luminosite +offset
+        meanValv=cv2.mean(v)
+        diffv=125-meanValv[0]
+        v=cv2.convertScaleAbs(v, beta=diffv)
+        # refusioner l'image
+        imageHSV = cv2.merge((h,s,v))
+
+        #re-convertir en rgb
+        imageHSV_hist = cv2.cvtColor(imageHSV, cv2.COLOR_HSV2BGR)
      
         #thresholding
+<<<<<<< HEAD
         min_red = np.array((0. ,100. ,60. ))
         max_red = np.array((7. ,255. ,255. ))
+=======
+        min_red = np.array((0. ,80. ,60. ))
+        max_red = np.array((12. ,255. ,255. ))
+>>>>>>> 44e05713f972f39d512c59280b58a2a75bc9e960
          
-        min_red2 = np.array((170. ,100. ,60. ))
+        min_red2 = np.array((170. ,80. ,60. ))
         max_red2 = np.array((180. ,255. ,255. ))
      
         imgThresh = cv2.inRange(imageHSV, min_red, max_red)
@@ -266,13 +299,13 @@ def videoThread():
             out.write(compoImage)
          
         #AFFICHAGE# separer les couleurs
-        #cv2.imshow("imageHSV", imageHSV)
+        cv2.imshow("imageHSV_hist", imageHSV_hist)
         #cv2.imshow("imgThresh", imgThresh)
         #cv2.imshow("imgThresh2", imgThresh2)
         #cv2.imshow("imgThreshT", imgThreshT)
         #cv2.imshow("cont", cont)
         #cv2.imshow("canny", canny)
-        #cv2.imshow("img", img)
+        cv2.imshow("img", img)
         #cv2.imshow("closing", closing)
         cv2.imshow("Composed", compoImage)
      

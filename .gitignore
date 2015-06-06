@@ -8,3 +8,5 @@ build
 *.tlog
 *~
 *.avi
+*.png
+*.pyc
