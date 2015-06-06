@@ -2,9 +2,12 @@
 import cv2
 import time
 import Image
+import math
+from math import pi
 import numpy as np
 import threading
 import Queue
+
 
 
 exitFlag = 0
@@ -33,9 +36,9 @@ def toucheAction(delai=50):
     'ESC' --> quitte le programe
     'g' --> demarre ou arrete la capture
     """
-    save=1048691
-    esp=1048603
-    video=1048679
+    save=115
+    esp=27
+    video=118
      
     k = cv2.waitKey(delai)
     
@@ -51,7 +54,51 @@ def toucheAction(delai=50):
     else:
         flag=False
     return flag
+
+def interdistance(bary_Nth,w,h):
+    (x1,y1) = bary_Nth
+    (x2,y2) = (int(w/2),int(h/2))
+    distancex= x1-x2
+    distancey= y2-y1
+    distances=(distancex, distancey)
+    return distances
  
+def angle(bary_Nth, bary_Sth):
+    (x1,y1)=bary_Nth
+    (x2,y2)=bary_Sth
+    deltaX=x1-x2
+    deltaY=y2-y1
+    convert=float(180)/pi
+
+    yaw=0
+
+    if deltaX!=0 and deltaY!=0:
+        if deltaX>0:
+            if deltaY>0:
+                yaw=math.atan(float(deltaX)/deltaY)*convert
+            else:
+                yaw=(pi-math.atan(float(deltaX)/(abs(deltaY))))*convert
+        else:
+            if deltaY>0:
+                yaw=(2*pi-math.atan(float(abs(deltaX))/deltaY))*convert
+            else:
+                yaw=(pi+math.atan(float(abs(deltaX))/(abs(deltaY))))*convert
+    elif deltaY==0 and deltaX!=0:
+        if deltaX<0:
+            yaw=3*pi/2*convert
+        else:
+            yaw=pi/2*convert
+    elif deltaY!=0 and deltaX==0:
+        if deltaY<0:
+            yaw=pi*convert
+        else:
+            yaw=0
+    else:
+        print "non detection" 
+
+    return int(yaw)
+     
+
 """
 IMAGE PROSSESSING
 """
@@ -62,7 +109,7 @@ def videoThread():
     cv2.startWindowThread()
 
     #CONFIG CAPTURE
-    capture=cv2.VideoCapture(1)
+    capture=cv2.VideoCapture(0)
      
     #CONFIG CAPTURE VIDEO
     w=int(capture.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH ))
@@ -73,11 +120,14 @@ def videoThread():
     #INITIALISATION DES BOOL
     boolBoucle=True
     boolVideo=False
-     
+
+
     while (boolBoucle):
         #CAPTURE
         capture.read()
         ret, img = capture.read()
+        rows,cols,channels = img.shape
+
          
         #TRAITEMENT VIDEO
         """
@@ -94,13 +144,12 @@ def videoThread():
         #blur
         img = cv2.GaussianBlur(img,(5,5),0)
          
-         
         #HSV
         imageHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
      
         #thresholding
         min_red = np.array((0. ,100. ,60. ))
-        max_red = np.array((12. ,255. ,255. ))
+        max_red = np.array((7. ,255. ,255. ))
          
         min_red2 = np.array((170. ,100. ,60. ))
         max_red2 = np.array((180. ,255. ,255. ))
@@ -118,6 +167,14 @@ def videoThread():
         canny = dst = cv2.Canny( blur, 0, 255 )
         """
          
+        #repere
+        pt1=(cols/2,0)
+        pt2=(cols/2,rows)
+        cv2.line(img,pt1,pt2,[255,255,255],1)
+        pt3=(0,rows/2)
+        pt4=(cols,rows/2)
+        cv2.line(img,pt3,pt4,[255,255,255],1)
+
         #contour
         contours,hier = cv2.findContours(closing,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
      
@@ -126,30 +183,61 @@ def videoThread():
         cnt_filt=[]
         for cnt in contours:
             CurrAera=cv2.contourArea(cnt)
-            if CurrAera>300 :  # remove small areas like noise etc
+            if CurrAera>1500 :  # remove small areas like noise etc
                 #hull = cv2.convexHull(cnt)    # find the convex hull of contour
                 hull = cv2.approxPolyDP(cnt,0.02*cv2.arcLength(cnt,True),True)
+                approx = cv2.convexHull(cnt)
                 #if len(hull)==12:
                 if not cv2.isContourConvex(hull) and len(hull)<=12:
                     m = cv2.moments(hull)
+                    n = cv2.moments(approx)
                     if m['m00'] !=0:
-                        center=(int(m['m10']/m['m00']),int(m['m01']/m['m00']))
-                        #register info 
-                        cnt_filt.append((CurrAera, center, hull))
+                        barycentre=(int(m['m10']/m['m00']),int(m['m01']/m['m00']))
                         cv2.drawContours(img,[hull],0,(0,0,255),2)
+                        barycentre_2=(int(n['m10']/n['m00']),int(n['m01']/n['m00']))
+
+                        cv2.circle(img,barycentre_2,4,(255,0,255),-1)
+                        cv2.drawContours(img,[approx],0,(0,255,255),2)
+                        cv2.line(img,barycentre,barycentre_2,[255,255,255],1)
+                        #register info 
+                        cnt_filt.append((CurrAera, barycentre, barycentre_2, hull))
+                        centre=(int(w*0.5),int(h*0.5))
+
+
+
+
+
+
+
 
         #trie des contour filtre par aire les plus grandre
         cnt_filt.sort(reverse=True)
 
         #print cnt_filt
         if len(cnt_filt)>0:
-            cv2.circle(img,cnt_filt[0][1],4,(255,0,0),-1)                
-            cv2.drawContours(img,[cnt_filt[0][2]],0,(0,255,0),2)
+            cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
+
+            (a,b)=cnt_filt[0][2]
+            ptx=(a,int(h*0.5))
+            pty=(int(w*0.5),b)
+            cv2.line(img,cnt_filt[0][2],ptx,[0,0,255],1)
+            cv2.line(img,cnt_filt[0][2],pty,[0,0,255],1)
+
+            yaw=angle(cnt_filt[0][1], cnt_filt[0][2])
+
+
+
+            distances=interdistance(cnt_filt[0][1],w,h)
+            #print distances, yaw
+            cv2.drawContours(img,[cnt_filt[0][3]],0,(0,255,0),2)
+            
+
 
             if QueueVideo.full():
                 QueueVideo.get()
             #Put item in queue
-            QueueVideo.put('DETECT')
+            sendItem= ('DETECT',distances,yaw)
+            QueueVideo.put(sendItem)
                      
          
         #TEST ACTION

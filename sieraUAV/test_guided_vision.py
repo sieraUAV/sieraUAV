@@ -106,8 +106,6 @@ def condition_yaw(heading):
     vehicle.flush()
 
 
-
-
 ########################
 #GLOBAL VAR
 ########################
@@ -130,7 +128,52 @@ WEST=-2
 UP=-0.5
 DOWN=0.5
 
-DURATION=10
+DURATION=60
+
+#ASSER FUNCTION FOR TRACKING
+def tracking():
+    #init local var 
+    st_track=False
+    Queue_obj=0
+
+    #CORRECTOR VAR
+    p_Corec= 0.01
+    sat_Corec=2
+
+    if not QueueVideo.empty():
+        #GET QUEUE INFO
+        Queue_obj= QueueVideo.get()
+
+        if Queue_obj[0]=='DETECT':
+
+            #BEGIN TRACKING
+            (dstx,dsty)= Queue_obj [1]
+
+            #Compute speed
+            Vx_con= dstx*p_Corec
+            Vy_con= dsty*p_Corec
+
+
+            #Saturation
+            if Vx_con> sat_Corec:
+                Vx_con= sat_Corec
+            if Vy_con> sat_Corec:
+                Vy_con= sat_Corec
+
+            print Vx_con, Vy_con
+            condition_yaw(0)
+            send_nav_velocity(Vy_con,Vx_con,0)
+            st_track= True
+
+        else:
+            condition_yaw(0)
+            send_nav_velocity(0,0,0)
+
+    else:
+        condition_yaw(0)
+        send_nav_velocity(0,0,0)
+
+    return st_track
 
 #Mission start
 def mission():
@@ -143,20 +186,17 @@ def mission():
     boolVideoDet=False
     while not boolVideoDet:
         while not QueueVideo.empty():
-            boolVideoDet= (QueueVideo.get()=='DETECT')
+            boolVideoDet= (QueueVideo.get()[0]=='DETECT')
 
-    print "Oject detected"
+    print "Target detected"
 
-    vehicle.mode    = VehicleMode("LOITER")
+    #INIT TRACKING
+    vehicle.mode    = VehicleMode("GUIDED")
 
-    print("Going North ")
-    condition_yaw(0)
-    send_nav_velocity(NORTH,0,0)
-    time.sleep(DURATION)
-    send_nav_velocity(0,0,0)
-
-
-
+    #BEGIN TRACKING
+    while 1:
+        tracking()
+        time.sleep(0.1)
 
 #EXE MAIN
 # start video thread 
