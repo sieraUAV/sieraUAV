@@ -5,6 +5,7 @@ from pymavlink import mavutil
 
 import cv2
 import numpy as np
+from math import pi
 import sys
 
 sys.path.append('./')
@@ -131,7 +132,10 @@ DOWN=0.5
 DURATION=60
 
 #ASSER FUNCTION FOR TRACKING
+counter_lost_obj=0;
 def tracking():
+    global counter_lost_obj
+    
     #init local var 
     st_track=False
     Queue_obj=0
@@ -145,14 +149,25 @@ def tracking():
         Queue_obj= QueueVideo.get()
 
         if Queue_obj[0]=='DETECT':
-
+            counter_lost_obj=0
             #BEGIN TRACKING
             (dstx,dsty)= Queue_obj [1]
+            relative_yaw_tg= Queue_obj [2]
 
             #Compute speed
             Vx_con= dstx*p_Corec
             Vy_con= dsty*p_Corec
 
+            #If we are near the arrow
+            if abs(dstx)< 100 and abs(dsty)<100 :
+                #Compute cap target
+                cap_con= relative_yaw_tg  + vehicle.attitude.yaw * 180/pi
+                if cap_con>360:
+                    cap_con-= 360
+                elif cap_con<0:
+                    cap_con+= 360
+            else:
+                cap_con=0
 
             #Saturation
             if Vx_con> sat_Corec:
@@ -160,18 +175,18 @@ def tracking():
             if Vy_con> sat_Corec:
                 Vy_con= sat_Corec
 
-            print Vx_con, Vy_con
-            condition_yaw(0)
-            send_nav_velocity(Vy_con,Vx_con,0)
+            print dstx, dsty, cap_con
+            condition_yaw(cap_con)
+            send_nav_velocity(Vy_con, Vx_con, 0)
             st_track= True
 
         else:
-            condition_yaw(0)
-            send_nav_velocity(0,0,0)
-
-    else:
-        condition_yaw(0)
-        send_nav_velocity(0,0,0)
+            if (counter_lost_obj>6):
+                condition_yaw(0)
+                send_nav_velocity(0,0,0)
+                counter_lost_obj=7
+            else:
+                counter_lost_obj+=1
 
     return st_track
 
@@ -220,6 +235,6 @@ mission()
 #Attente fin thread video
 while threadCV.is_alive():
     print vehicle.mode
-    time.sleep(1)
+    time.sleep(0.1)
 
 threadCV.join()

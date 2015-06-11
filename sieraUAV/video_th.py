@@ -170,11 +170,11 @@ def videoThread():
         imageHSV_hist = cv2.cvtColor(imageHSV, cv2.COLOR_HSV2BGR)
      
         #thresholding
-        min_red = np.array((0. ,100. ,60. ))
+        min_red = np.array((0. ,125. ,125. ))
         max_red = np.array((7. ,255. ,255. ))
 
          
-        min_red2 = np.array((170. ,80. ,60. ))
+        min_red2 = np.array((170. ,125. ,125. ))
         max_red2 = np.array((180. ,255. ,255. ))
      
         imgThresh = cv2.inRange(imageHSV, min_red, max_red)
@@ -197,6 +197,17 @@ def videoThread():
         pt3=(0,rows/2)
         pt4=(cols,rows/2)
         cv2.line(img,pt3,pt4,[255,255,255],1)
+
+        #draw square
+        sq1= (cols/2 + 100, rows/2 + 100)
+        sq2= (cols/2 + 100, rows/2 - 100)
+        sq3= (cols/2 - 100, rows/2 - 100)
+        sq4= (cols/2 - 100, rows/2 + 100)
+
+        cv2.line(img,sq1,sq2,[255,255,255],1)
+        cv2.line(img,sq2,sq3,[255,255,255],1)
+        cv2.line(img,sq3,sq4,[255,255,255],1)
+        cv2.line(img,sq4,sq1,[255,255,255],1)
 
         #contour
         contours,hier = cv2.findContours(closing,cv2.RETR_LIST,cv2.CHAIN_APPROX_SIMPLE)
@@ -259,6 +270,13 @@ def videoThread():
                 QueueVideo.get()
             #Put item in queue
             sendItem= ('DETECT',distances,yaw)
+            QueueVideo.put(sendItem)
+
+        else:
+            if QueueVideo.full():
+                QueueVideo.get()
+            #Put item in queue
+            sendItem= ('KO')
             QueueVideo.put(sendItem)
                      
          
