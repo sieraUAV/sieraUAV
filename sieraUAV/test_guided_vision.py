@@ -5,7 +5,7 @@ from pymavlink import mavutil
 
 import cv2
 import numpy as np
-from math import pi
+from math import pi, cos, sin
 import sys
 
 sys.path.append('./')
@@ -106,6 +106,14 @@ def condition_yaw(heading):
     vehicle.send_mavlink(msg)
     vehicle.flush()
 
+#yaw en rad repere relatif --> absolu
+def chg_base_abs(xr, yr, yaw):
+
+    xa= xr*cos(yaw) + yr*sin(yaw)
+    ya= -xr*sin(yaw) + yr*cos(yaw)
+
+    return (xa,ya)
+
 
 ########################
 #GLOBAL VAR
@@ -175,9 +183,15 @@ def tracking():
             if Vy_con> sat_Corec:
                 Vy_con= sat_Corec
 
+
             print dstx, dsty, cap_con
+
+            #Passage en repere absolu
+            (Vx_con_a, Vy_con_a)= chg_base_abs(Vx_con, Vy_con, vehicle.attitude.yaw)
+            print Vx_con_a, Vy_con_a
+
             condition_yaw(cap_con)
-            send_nav_velocity(Vy_con, Vx_con, 0)
+            send_nav_velocity(Vy_con_a, Vx_con_a, 0)
             st_track= True
 
         else:
