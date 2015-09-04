@@ -3,27 +3,16 @@ import cv2
 import time
 import Image
 import math
-from math import pi
 import numpy as np
-import threading
-import Queue
+
+from misc.th_misc import *
+from misc.kalman_tool import kalman2D
+from misc.geo_misc   import *
 
 
 
 exitFlag = 0
-QueueVideo=Queue.Queue(10)
 
-#THREAD CLASS DEF
-class myThread (threading.Thread):
-    def __init__(self, threadID, name, function):
-        threading.Thread.__init__(self)
-        self.threadID = threadID
-        self.name = name
-        self.function = function
-    def run(self):
-        print "Starting " + self.name
-        self.function()
-        print "EXIT " + self.name
 
  
 #FONCTION TOUCHE
@@ -62,48 +51,7 @@ def toucheAction(delai=10):
         flag=False
     return flag
 
-def interdistance(bary_Nth,w,h):
-    (x1,y1) = bary_Nth
-    (x2,y2) = (int(w/2),int(h/2))
-    distancex= x1-x2
-    distancey= y2-y1
-    distances=(distancex, distancey)
-    return distances
- 
-def angle(bary_Nth, bary_Sth):
-    (x1,y1)=bary_Nth
-    (x2,y2)=bary_Sth
-    deltaX=x1-x2
-    deltaY=y2-y1
-    convert=float(180)/pi
 
-    yaw=0
-
-    if deltaX!=0 and deltaY!=0:
-        if deltaX>0:
-            if deltaY>0:
-                yaw=math.atan(float(deltaX)/deltaY)*convert
-            else:
-                yaw=(pi-math.atan(float(deltaX)/(abs(deltaY))))*convert
-        else:
-            if deltaY>0:
-                yaw=(2*pi-math.atan(float(abs(deltaX))/deltaY))*convert
-            else:
-                yaw=(pi+math.atan(float(abs(deltaX))/(abs(deltaY))))*convert
-    elif deltaY==0 and deltaX!=0:
-        if deltaX<0:
-            yaw=3*pi/2*convert
-        else:
-            yaw=pi/2*convert
-    elif deltaY!=0 and deltaX==0:
-        if deltaY<0:
-            yaw=pi*convert
-        else:
-            yaw=0
-    else:
-        print "non detection" 
-
-    return int(yaw)
      
 
 """
@@ -118,7 +66,7 @@ def videoThread():
     cv2.startWindowThread()
 
     #CONFIG CAPTURE
-    capture=cv2.VideoCapture(0)
+    capture=cv2.VideoCapture(-1)
      
     #CONFIG CAPTURE VIDEO
     w=int(capture.get(cv2.cv.CV_CAP_PROP_FRAME_WIDTH ))
@@ -130,10 +78,14 @@ def videoThread():
     boolBoucle=True
     boolVideo=False
 
+    #VAR POUR FILTRAGE
+    countDeadDetect=0
+    arrowK=kalman2D()
+
 
     while (boolBoucle):
         #CAPTURE
-        capture.read()
+        #capture.read()
         ret, img = capture.read()
         rows,cols,channels = img.shape
 
@@ -170,11 +122,11 @@ def videoThread():
         imageHSV_hist = cv2.cvtColor(imageHSV, cv2.COLOR_HSV2BGR)
      
         #thresholding
-        min_red = np.array((0. ,125. ,125. ))
-        max_red = np.array((7. ,255. ,255. ))
+        min_red = np.array((0. ,125. ,70. ))
+        max_red = np.array((10. ,255. ,255. ))
 
          
-        min_red2 = np.array((170. ,125. ,125. ))
+        min_red2 = np.array((170. ,125. ,70. ))
         max_red2 = np.array((180. ,255. ,255. ))
      
         imgThresh = cv2.inRange(imageHSV, min_red, max_red)
@@ -246,38 +198,67 @@ def videoThread():
         #trie des contour filtre par aire les plus grandre
         cnt_filt.sort(reverse=True)
 
-        #print cnt_filt
+        #DETECTION
         if len(cnt_filt)>0:
-            cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
+
+            #Put counter bad detection to 0
+            countDeadDetect=0
 
             (a,b)=cnt_filt[0][2]
+            (x,y)=(0,0)
+            #Init kalman
+            if not arrowK.alive:
+                arrowK.init(a, b, m_noise_cov=1e-4)
+            #Correct kalman
+            else:
+                arrowK.predict()
+                (x,y)=arrowK.correct(a,b)
+
             ptx=(a,rows/2)
             pty=(cols/2,b)
+
+            #Paint
+            cv2.circle(img,(x,y),4,(0,255,0),-1)
+            cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
             cv2.line(img,cnt_filt[0][2],ptx,[0,0,255],1)
             cv2.line(img,cnt_filt[0][2],pty,[0,0,255],1)
 
             yaw=angle(cnt_filt[0][1], cnt_filt[0][2])
 
-
-
             distances=interdistance(cnt_filt[0][1],cols,rows)
             #print distances, yaw
             cv2.drawContours(img,[cnt_filt[0][3]],0,(0,255,0),2)
             
-
-
-            if QueueVideo.full():
-                QueueVideo.get()
+    
             #Put item in queue
             sendItem= ('DETECT',distances,yaw)
-            QueueVideo.put(sendItem)
+            Q_RX.put_bis(sendItem)
 
+        #PREDICTION
+        elif countDeadDetect<10 and arrowK.alive:
+
+            #Increment counter
+            countDeadDetect+=1
+
+
+            (x,y)=arrowK.predict()
+
+            #print prediction point
+            cv2.circle(img,(x,y),4,(0,255,0),-1)
+
+            distances=interdistance((x,y),cols,rows)
+            
+            #Put item in queue
+            sendItem= ('PREDICTION',distances)
+            Q_RX.put_bis(sendItem)
+
+        #KALMAN DEAD
         else:
-            if QueueVideo.full():
-                QueueVideo.get()
+            arrowK.alive=False
+
             #Put item in queue
             sendItem= ('KO')
-            QueueVideo.put(sendItem)
+            Q_RX.put_bis(sendItem)
                      
          
         #TEST ACTION
