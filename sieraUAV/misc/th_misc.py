@@ -47,7 +47,7 @@ class Queue_cust(Queue.Queue):
 """
 Queue between main <--- video_th (max 10 items)
 
-Use to send information from image processing thread to the main thread
+Use to send informations from image processing thread to the main thread
 """
 Q_RX=Queue_cust(10)
 

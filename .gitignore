@@ -3,6 +3,7 @@
 droneapi.egg-info
 dist
 build
+terrain
 .vagrant
 *.raw
 *.tlog
@@ -10,3 +11,4 @@ build
 *.avi
 *.png
 *.pyc
+*.bin

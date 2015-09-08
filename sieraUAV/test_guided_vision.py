@@ -152,9 +152,9 @@ def tracking():
     p_Corec= 0.01
     sat_Corec=2
 
-    if not QueueVideo.empty():
+    if not Q_RX.empty():
         #GET QUEUE INFO
-        Queue_obj= QueueVideo.get()
+        Queue_obj= Q_RX.get()
 
         if Queue_obj[0]=='DETECT':
             counter_lost_obj=0
@@ -206,7 +206,7 @@ def tracking():
 
 #Mission start
 def mission():
-    global QueueVideo
+    global Q_RX
     init_api()
     #Takeoff
     arm_and_takeoff()
@@ -214,8 +214,8 @@ def mission():
     #Attente de detection objet
     boolVideoDet=False
     while not boolVideoDet:
-        while not QueueVideo.empty():
-            boolVideoDet= (QueueVideo.get()[0]=='DETECT')
+        while not Q_RX.empty():
+            boolVideoDet= (Q_RX.get()[0]=='DETECT')
 
     print "Target detected"
 
