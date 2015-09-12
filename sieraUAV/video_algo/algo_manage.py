@@ -130,6 +130,9 @@ class algo_process:
 		img_cpt=115
 		esp=27
 		video=118
+		pause=112
+
+		PAUSE=False
 
 		k = cv2.waitKey(delai)
 
@@ -142,6 +145,12 @@ class algo_process:
 			self.boolStop=True
 		elif k == video:
 			self.boolVideo=not self.boolVideo
+		elif k==pause:
+			PAUSE=True
+			while PAUSE:
+				k = cv2.waitKey(delai)
+				if k==pause:
+					PAUSE=False
 		else:
 			flag=False
 		return flag

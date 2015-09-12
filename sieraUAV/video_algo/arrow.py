@@ -3,6 +3,7 @@
 from misc.kalman_tool import kalman2D
 from misc.geo_misc   import *
 from video_algo.algo_manage import *
+from misc.vid_misc import *
 
 """
 Return information about arrow detection algorytme
@@ -23,7 +24,8 @@ class arrow:
 
 		#VAR POUR FILTRAGE
 		self.countDeadDetect=0
-		self.arrowK=kalman2D()
+		self.arrowK=kalman2D(alive=False)
+		self.tresh=clever_thresh()
 
 		#Presision pour le statut ALIGN
 		self.align_pres=align_pres
@@ -43,35 +45,26 @@ class arrow:
 		imageHSV = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
 		#NORMALISATEUR DE LUMINOSITE
-		# separer les valeurs
-		h,s,v = cv2.split(imageHSV)
-		# Calcul de moyenne sur luminosite +offset
-		meanValv=cv2.mean(v)
-		diffv=125-meanValv[0]
-		v=cv2.convertScaleAbs(v, beta=diffv)
-		# refusioner l'image
-		imageHSV = cv2.merge((h,s,v))
+		# # separer les valeurs
+		# h,s,v = cv2.split(imageHSV)
+		# # Calcul de moyenne sur luminosite +offset
+		# meanValv=cv2.mean(v)
+		# diffv=125-meanValv[0]
+		# v=cv2.convertScaleAbs(v, beta=diffv)
+		# # refusioner l'image
+		# imageHSV = cv2.merge((h,s,v))
 
 		#re-convertir en rgb
-		imageHSV_hist = cv2.cvtColor(imageHSV, cv2.COLOR_HSV2BGR)
+		
+		imgHSV2=np.array(imageHSV)
 	 
-		#thresholding
-		min_red = np.array((0. ,125. ,70. ))
-		max_red = np.array((10. ,255. ,255. ))
-
-		 
-		min_red2 = np.array((170. ,125. ,70. ))
-		max_red2 = np.array((180. ,255. ,255. ))
-	 
-		imgThresh = cv2.inRange(imageHSV, min_red, max_red)
-		imgThresh2= cv2.inRange(imageHSV, min_red2, max_red2)
-		imgThreshT=cv2.bitwise_or(imgThresh,imgThresh2)
+		imgThreshT=self.tresh.exe(imageHSV)
 	 	
 	 	#Update algo management class
-	 	algo_man.imgTresh=imgThreshT
+	 	algo_man.imgTresh=np.array(imgThreshT)
 
 		#close function (effacer les trous)
-		kernel = np.ones((7,7),np.uint8)
+		kernel = np.ones((4	,4),np.uint8)
 		closing = cv2.morphologyEx(imgThreshT, cv2.MORPH_CLOSE, kernel)
 		 
 		#contour
@@ -87,7 +80,7 @@ class arrow:
 				hull = cv2.approxPolyDP(cnt,0.02*cv2.arcLength(cnt,True),True)
 				approx = cv2.convexHull(cnt)
 				#if len(hull)==12:
-				if not cv2.isContourConvex(hull) and len(hull)<=12:
+				if not cv2.isContourConvex(hull) and len(hull)>=6 and len(hull)<=10:
 					m = cv2.moments(hull)
 					n = cv2.moments(approx)
 					if m['m00'] !=0:
@@ -108,62 +101,100 @@ class arrow:
 		#DETECTION
 		if len(cnt_filt)>0:
 
-			#Put counter bad detection to 0
-			self.countDeadDetect=0
-
-			(a,b)=cnt_filt[0][2]
-			(x,y)=(0,0)
-			#Init kalman
-			if not self.arrowK.alive:
-				self.arrowK.init(a, b, m_noise_cov=1e-4)
-			#Correct kalman
+			#Put counter bad detection to 0 or decremente
+			if self.countDeadDetect>0:
+				self.countDeadDetect=0
+			elif self.countDeadDetect<=-6:
+				self.countDeadDetect=-6
 			else:
-				self.arrowK.predict()
-				(x,y)=self.arrowK.correct(a,b)
+				self.countDeadDetect-=1
 
-			ptx=(a,rows/2)
-			pty=(cols/2,b)
+			(xd,yd)=cnt_filt[0][2]
 
-			#Paint
-			cv2.circle(img,(x,y),4,(0,255,0),-1)
-			cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
-			cv2.line(img,cnt_filt[0][2],ptx,[0,0,255],1)
-			cv2.line(img,cnt_filt[0][2],pty,[0,0,255],1)
-			cv2.drawContours(img,[cnt_filt[0][3]],0,(0,255,0),2)
-			
-			#Update img of algo management
-			algo_man.img=img
-			distances=interdistance(cnt_filt[0][1],cols,rows)
 
-			#Test if we are align
-			(distX,distY)=distances
-			if abs(distX)<self.align_pres and abs(distY)<self.align_pres:
-				#ALIGN
-				yaw=angle(cnt_filt[0][1], cnt_filt[0][2])
-				#Return info
-				return arrow_info(status=STATUS_ALG.TRACKING, dst=distances, angle=yaw)
-			
+			#Update clever threshold and kalman if we need (after 5 detection)
+			if self.countDeadDetect<=-3:
+				#KALMAN
+				if not self.arrowK.alive:
+					self.arrowK.__init__(xd, yd , True, m_noise_cov=1e-3	, dst_des=rows*0.20 )
+
+			if self.arrowK.alive:
+				#Correct kalman 
+				(xk,yk,ret_corr)=self.arrowK.correct(xd,yd)
+				cv2.circle(img,(xk,yk),4,(0,255,0),-1)
+
+				#If correction sucess
+				if self.arrowK.track :
+
+					ptx=(xk,rows/2)
+					pty=(cols/2,yk)
+
+					#Paint distance between kalman prediction and center of the picture
+					cv2.line(img,(xk,yk),ptx,[0,0,255],1)
+					cv2.line(img,(xk,yk),pty,[0,0,255],1)
+
+					if ret_corr:
+						#Update clever thresh
+						self.tresh.compute_HSV_pt((xd,yd), imgHSV2, img, (cnt_filt[0][0]*0.03)**0.5)
+						##Paint rest of info##
+						#Detection barycenter
+						cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
+						#Detection contour
+						cv2.drawContours(img,[cnt_filt[0][3]],0,(0,255,0),2)
+						#Validation circle
+						cv2.circle(img,(xk,yk),int(self.arrowK.dst_des),(0,0,255),1)
+
+
+					#Update img of algo management
+					algo_man.img=img
+
+					distances=interdistance((xk,yk),cols,rows)
+
+					#Test if we are align
+					(distX,distY)=distances
+					if abs(distX)<self.align_pres and abs(distY)<self.align_pres and ret_corr:
+						#ALIGN
+						#Compute arrow angle
+						yaw=angle(cnt_filt[0][1], cnt_filt[0][2])
+						#Return info
+						return arrow_info(status=STATUS_ALG.ALIGN, dst=distances, angle=yaw)
+					
+					else:
+						#TRACKING
+						#Return info
+						return arrow_info(status=STATUS_ALG.TRACKING, dst=distances )
+
+
+				else:
+					#Update img of algo management
+					algo_man.img=img
+
 			else:
-				#TRACKING
-				#Return info
-				return arrow_info(status=STATUS_ALG.TRACKING, dst=distances )
+				#if not tracking --> return to basic tresh
+				self.tresh.status=STAT_THR.DEF
 
 		#PREDICTION
-		elif self.countDeadDetect<10 and self.arrowK.alive:
+		elif self.countDeadDetect<10 and self.arrowK.track:
 
 			#Increment counter
 			self.countDeadDetect+=1
 
+			if self.countDeadDetect<=0:
+				self.tresh.load_old_HSV_pt()
+			else:
+				self.tresh.status=STAT_THR.DEF
 
+			#Get prediction point
 			(x,y)=self.arrowK.predict()
 
 			#print prediction point
 			cv2.circle(img,(x,y),4,(0,255,0),-1)
 
 			distances=interdistance((x,y),cols,rows)
-			
+
 			#Return info
 			algo_man.img=img
+
 			return arrow_info(status=STATUS_ALG.TRACKING, dst=distances )
 
 		#KALMAN DEAD
@@ -172,4 +203,8 @@ class arrow:
 
 			#Return info
 			algo_man.img=img
+
+			#Update clever threshold
+			self.tresh.status=STAT_THR.DEF
+
 			return arrow_info(status=STATUS_ALG.KO)
