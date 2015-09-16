@@ -40,6 +40,15 @@ class Queue_cust(Queue.Queue):
 
 		self.put(obj)
 
+	def get_bis(self):
+		#if queue is empty return false value
+		if self.empty():
+			return (False, None)
+
+		else:
+			return (True, self.get())
+
+
 
 
 

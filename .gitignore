@@ -4,6 +4,7 @@ droneapi.egg-info
 dist
 build
 terrain
+logs
 .vagrant
 *.raw
 *.tlog

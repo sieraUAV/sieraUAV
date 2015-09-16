@@ -62,3 +62,20 @@ def angle(pts_B, pts_A):
         print "non detection" 
 
     return int(yaw)
+
+
+"""
+Enable to change base in 2D (relatives --> absolues)
+@param xr : x coordonate rom base 2
+@param yr:  y coordonate rom base 2
+@param angle: angle between base 1 and base 2
+@return Return (x,y) coordinate from base 1
+"""
+
+#yaw en rad repere relatif --> absolu
+def chg_base_abs(xr, yr, angle):
+
+    xa= xr*cos(angle) + yr*sin(angle)
+    ya= -xr*sin(angle) + yr*cos(angle)
+
+    return (xa,ya)

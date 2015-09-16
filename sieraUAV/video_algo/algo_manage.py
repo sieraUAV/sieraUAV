@@ -8,10 +8,10 @@ import Image
 import math
 import numpy as np
 
-from misc.misc import *
+from misc.misc import enum
 
 #ENUM
-ALGOS=enum('ARROW','CROSS','BLK_SQUR')
+ALGOS=enum('NONE','ARROW','CROSS','BLK_SQUR')
 STATUS_ALG= enum('KO','TRACKING','ALIGN')
 
 #CLASS
@@ -40,6 +40,10 @@ class algo_process:
 
 		##init capture##
 		self.init_cv(camera)
+
+	def __del__(self):
+		self.capture.release()
+    	cv2.destroyAllWindows()
 
 	def init_cv(self, camera):
 		#INIT WINDOW
