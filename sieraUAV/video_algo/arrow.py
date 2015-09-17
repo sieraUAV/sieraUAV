@@ -192,6 +192,7 @@ class arrow:
 
 			distances=interdistance((x,y),cols,rows)
 
+
 			#Return info
 			algo_man.img=img
 
@@ -207,4 +208,5 @@ class arrow:
 			#Update clever threshold
 			self.tresh.status=STAT_THR.DEF
 
-			return arrow_info(status=STATUS_ALG.KO)
+		#Default return	
+		return arrow_info(status=STATUS_ALG.KO)	

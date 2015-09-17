@@ -79,3 +79,26 @@ def chg_base_abs(xr, yr, angle):
     ya= -xr*sin(angle) + yr*cos(angle)
 
     return (xa,ya)
+
+
+"""
+	Get distances from two waypoints
+"""
+def get_dst_2WP(loc1, loc2):
+	(lat1, lon1)=loc1
+	(lat2, lon2)=loc2
+
+	#Converssion
+	d2r=pi/180
+	lat1*=d2r
+	lat2*=d2r
+	lon1*=d2r
+	lon2*=d2r
+	
+	dLat=lat2 - lat1
+	dLon=lon2 - lon1
+
+	a = sin(0.5*dLat)**2 + sin(0.5*dLon)**2 * cos(lat1) * cos(lat2)
+	c = 2.0 * atan2(sqrt(a), sqrt(1.0-a))
+	ground_dist = 6378137.0 * c
+	return ground_dist

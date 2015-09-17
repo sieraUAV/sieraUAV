@@ -39,12 +39,12 @@ class Corr_PI:
 
 		#Correction
 		#P
-		con_Kp=Kp*err
+		con_Kp=self.Kp*err
 		#I
 		if self.st_clamping:
 			con_Ki=0
 		else:
-			self.inte_value+=Ki*err*(corr_time-self.st_clamping)
+			self.inte_value+=self.Ki*err*(corr_time-self.st_clamping)
 			con_Ki=self.inte_value
 
 		#SUM
@@ -70,7 +70,7 @@ class Corr_PI:
 		self.last_time=corr_time
 
 		#Return command
-		return 
+		return con_sat
 
 	def reset(self):
 		#Reset corrector internal var

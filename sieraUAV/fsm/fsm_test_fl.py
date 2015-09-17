@@ -8,8 +8,9 @@ from pymavlink import mavutil
 from pymavlink import mavextra
 from misc.th_misc import Q_TX, Q_RX
 from video_algo.algo_manage import ALGOS, STATUS_ALG
+from video_algo.arrow import arrow_info
 from misc.misc import *
-from misc.geo_misc import chg_base_abs
+from misc.geo_misc import chg_base_abs, get_dst_2WP
 import time
 
 
@@ -45,6 +46,18 @@ class fsm_test:
 		self.lon=None
 		self.alt=None	#metres
 		self.yaw=None	#degrees
+		self.distWP=0	#metres
+
+		#WP info
+		self.WPlist= None
+		self.WPDetec=None
+
+		#State of video processing
+		self.alg_en=False
+
+		#Correctors PI
+		self.corr_x=Corr_PI(Kp=0.01, Ki=0.001, Sats=(-2, 2) )
+		self.corr_y=Corr_PI(Kp=0.01, Ki=0.001, Sats=(-2, 2) )
 
 
 	#STATES methodes
@@ -52,6 +65,9 @@ class fsm_test:
 		#Transition INIT-->TAKEOFF
 		if self.fix >= GPS_FX.FX_3D and self.alt<=0.1 and self.alt>=-0.1:
 			#ACTION
+			#Save WP
+			self.WPlist=[ (self.lat, self.lon) ]
+			#Takeoff
 			print "Ready to takeoff"
 			self.act_takeoff()
 			#CHANGE ST
@@ -75,14 +91,36 @@ class fsm_test:
 			#ACTION
 			print "Going to: ", self.pt_gps_start
 			self.act_nav_goto(self.pt_gps_start)
-			print "Activate arrow algo"
-			Q_TX.put_bis(ALGOS.ARROW)
+
 			#CHANGE ST
 			self.state=FSM_ST.NAV
 
 
 	def st_nav(self):
-		pass
+
+		#Transition NAV-->NAV
+		if self.distWP>7 and not self.alg_en:
+			#ACTION
+			#Activate arrow algo
+			Q_TX.put_bis(ALGOS.ARROW)
+			self.alg_en=True
+			#Print distance
+			print "Distance from WP: ", self.distWP
+			#CHANGE ST
+			self.state=FSM_ST.NAV
+
+		elif self.fl_nw_msg:
+
+		#Transition NAV-->ARROW_TRK
+			if self.msg.algo==ALGOS.ARROW and self.msg.status!=STATUS_ALG.KO:
+				#ACTION
+				self.fl_nw_msg=False
+				#Save detection point
+				self.WPDetec=(self.lat, self.lon)
+				#Init tracking
+				self.act_tracking(reset=True)
+
+
 
 	def st_arrow_trk(self):
 		pass
@@ -125,6 +163,44 @@ class fsm_test:
 		self.vehicle.commands.goto(loc)
 		self.vehicle.flush()
 
+
+	def act_tracking(self, reset=False):
+		#Reset corrector if needed
+		if reset:
+			self.corr_x.reset()
+			self.corr_y.reset()
+
+		#Compute speeds commands in UAV base
+		(err_x, err_y)= self.msg.distances
+		Vxd=self.corr_x.run(err_x)
+		Vyd=self.corr_y.run(err_y)
+
+		#Change of base: UAV --> earth
+		(Vxa, Vya)=chg_base_abs(Vxd, Vyd, self.yaw)
+
+		#Send commands to UAV
+		self.send_nav_velocity(Vya, Vxa , 0)
+
+
+	def send_nav_velocity(self, velocity_x, velocity_y, velocity_z):
+		# create the SET_POSITION_TARGET_LOCAL_NED command
+		# Check https://pixhawk.ethz.ch/mavlink/#SET_POSITION_TARGET_LOCAL_NED
+		# for info on the type_mask (0=enable, 1=ignore).
+		# Accelerations and yaw are ignored in GCS_Mavlink.pde at the
+		# time of writing.
+		msg = self.vehicle.message_factory.set_position_target_local_ned_encode(
+			0,       # time_boot_ms (not used)
+			0, 0,    # target system, target component
+			mavutil.mavlink.MAV_FRAME_BODY_NED, # frame
+			0b0000111111000111, # type_mask (only speeds enabled)
+			0, 0, 0, # x, y, z positions (not used)
+			velocity_x, velocity_y, velocity_z, # x, y, z velocity in m/s
+			0, 0, 0, # x, y, z acceleration (not supported yet, ignored in GCS_Mavlink.pde)
+			0, 0)    # yaw, yaw_rate (not supported yet, ignored in GCS_Mavlink.pde) 
+		# send command to vehicle
+		self.vehicle.send_mavlink(msg)
+		self.vehicle.flush()
+
 	#ROUTINES methodes
 	def rt_fsm_mng(self):
 
@@ -162,7 +238,12 @@ class fsm_test:
 		self.alt=self.vehicle.location.alt
 
 		#Get yaw
-		self.yaw=self.vehicle.attitude.yaw * 180/pi
+		self.yaw=self.vehicle.attitude.yaw
+
+		#get distance from the last WP
+		if self.WPlist!=None:
+			lstWP_loc= self.WPlist[len(self.WPlist)-1]
+			self.distWP=get_dst_2WP(lstWP_loc, (self.lat, self.lon))
 
 		#Update msg from queues	
 		(self.fl_nw_msg, self.msg)= Q_RX.get_bis()
