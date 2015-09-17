@@ -24,11 +24,11 @@ def interdistance(pts,w,h):
  
 """
 Enable to get angle from a vector (2 points: (A,B)) and the base of the image
-@param pts_B : point A
-@param pts_A: point B
+@param pts_B : point B
+@param pts_A: point A
 @return Return the angle in degrees
 """
-def angle(pts_B, pts_A):
+def angle(pts_A, pts_B ):
     (x1,y1)=pts_B
     (x2,y2)=pts_A
     deltaX=x1-x2
@@ -94,7 +94,7 @@ def get_dst_2WP(loc1, loc2):
 	lat2*=d2r
 	lon1*=d2r
 	lon2*=d2r
-	
+
 	dLat=lat2 - lat1
 	dLon=lon2 - lon1
 
@@ -102,3 +102,31 @@ def get_dst_2WP(loc1, loc2):
 	c = 2.0 * atan2(sqrt(a), sqrt(1.0-a))
 	ground_dist = 6378137.0 * c
 	return ground_dist
+
+def PCA(data, dims_rescaled_data=2):
+    """
+    returns: data transformed in 2 dims/columns + regenerated original data
+    pass in: data as 2D NumPy array
+    """
+    import numpy as NP
+    from scipy import linalg as LA
+    m, n = data.shape
+    # mean center the data
+    data -= data.mean(axis=0)
+    # calculate the covariance matrix
+    R = NP.cov(data, rowvar=False)
+    # calculate eigenvectors & eigenvalues of the covariance matrix
+    # use 'eigh' rather than 'eig' since R is symmetric, 
+    # the performance gain is substantial
+    evals, evecs = LA.eigh(R)
+    # sort eigenvalue in decreasing order
+    idx = NP.argsort(evals)[::-1]
+    evecs = evecs[:,idx]
+    # sort eigenvectors according to same index
+    evals = evals[idx]
+    # select the first n eigenvectors (n is desired dimension
+    # of rescaled data array, or dims_rescaled_data)
+    evecs = evecs[:, :dims_rescaled_data]
+    # carry out the transformation on the data using eigenvectors
+    # and return the re-scaled data, eigenvalues, and eigenvectors
+    return NP.dot(evecs.T, data.T).T, evals, evecs

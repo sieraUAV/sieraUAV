@@ -30,6 +30,40 @@ class arrow:
 		#Presision pour le statut ALIGN
 		self.align_pres=align_pres
 
+
+	def angle_PCA_Ctr(self, contour):
+		#PCA
+		bufdata=np.array([contour[0][0]])
+		for n in range(1,len(contour)):
+			bufdata= np.append(bufdata, [contour[n][0]], axis=0)
+
+		#Compute PCA
+		(data, eigenvalues, eigenvectors)=PCA(bufdata)
+
+		#Determine front
+		cnt_pos_x=0
+		invert=1.
+		for pt in data:
+			if pt[0]>0:
+				cnt_pos_x+=1
+			else:
+				cnt_pos_x-=1
+
+		if cnt_pos_x<0:
+			invert=-1.
+
+		#extract main direction vector
+		v1=eigenvectors[0]*invert
+		v1[1]*=-1
+
+		#compute angle
+		yaw=angle((0.,0.), (v1[0], v1[1]))
+		print "ANGLE PCA: ", yaw
+
+		return (yaw, v1)
+
+
+
 	def processing(self, algo_man):
 
 		#Update with algo management class
@@ -145,6 +179,8 @@ class arrow:
 						cv2.circle(img,(xk,yk),int(self.arrowK.dst_des),(0,0,255),1)
 
 
+
+
 					#Update img of algo management
 					algo_man.img=img
 
@@ -155,7 +191,17 @@ class arrow:
 					if abs(distX)<self.align_pres and abs(distY)<self.align_pres and ret_corr:
 						#ALIGN
 						#Compute arrow angle
-						yaw=angle(cnt_filt[0][1], cnt_filt[0][2])
+						yaw=angle(cnt_filt[0][2], cnt_filt[0][1] )
+
+						#PCA angle calculation
+						(angle_te, vect)=self.angle_PCA_Ctr(cnt_filt[0][3])
+
+						#draw direction
+						center= np.array(cnt_filt[0][1])
+						p1=center + 50 * vect
+						p1= (int(p1[0]), int(p1[1]))
+						cv2.line(img,cnt_filt[0][2],p1,[255,0,0],2)
+
 						#Return info
 						return arrow_info(status=STATUS_ALG.ALIGN, dst=distances, angle=yaw)
 					
