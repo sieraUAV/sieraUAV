@@ -58,10 +58,22 @@ class arrow:
 
 		#compute angle
 		yaw=angle((0.,0.), (v1[0], v1[1]))
-		print "ANGLE PCA: ", yaw
 
-		return (yaw, v1)
+		return (yaw, v1, eigenvalues)
 
+
+	def display_info(self, img, state="KO", dst=None, angle=None):
+
+		string= "Tracking informations: %s" % state
+
+		if dst!=None:
+			string+= ", Position error: x=%d y=%d" % dst
+
+		if angle!=None:
+			string+= ", Arrow angle: %d" % int(angle)
+
+		#Print info on img
+		cv2.putText(img,string, (5,15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (10,255,10),1)
 
 
 	def processing(self, algo_man):
@@ -124,7 +136,6 @@ class arrow:
 
 						cv2.circle(img,barycentre_2,4,(255,0,255),-1)
 						cv2.drawContours(img,[approx],0,(0,255,255),2)
-						cv2.line(img,barycentre,barycentre_2,[255,255,255],1)
 						#register info 
 						cnt_filt.append((CurrAera, barycentre, barycentre_2, hull))
 
@@ -169,7 +180,7 @@ class arrow:
 
 					if ret_corr:
 						#Update clever thresh
-						self.tresh.compute_HSV_pt((xd,yd), imgHSV2, img, (cnt_filt[0][0]*0.03)**0.5)
+						self.tresh.compute_HSV_pt(cnt_filt[0][1], imgHSV2, img, (cnt_filt[0][0]*0.03)**0.5)
 						##Paint rest of info##
 						#Detection barycenter
 						cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
@@ -190,23 +201,25 @@ class arrow:
 					(distX,distY)=distances
 					if abs(distX)<self.align_pres and abs(distY)<self.align_pres and ret_corr:
 						#ALIGN
-						#Compute arrow angle
-						yaw=angle(cnt_filt[0][2], cnt_filt[0][1] )
-
 						#PCA angle calculation
-						(angle_te, vect)=self.angle_PCA_Ctr(cnt_filt[0][3])
+						(yaw, main_vec,  eigenvalues)=self.angle_PCA_Ctr(cnt_filt[0][3])
 
 						#draw direction
-						center= np.array(cnt_filt[0][1])
-						p1=center + 50 * vect
+						pt_ctr=cnt_filt[0][2]
+						center= np.array([float(pt_ctr[0]), float(pt_ctr[1])])
+						p1=center+50.*main_vec
 						p1= (int(p1[0]), int(p1[1]))
-						cv2.line(img,cnt_filt[0][2],p1,[255,0,0],2)
+						cv2.line(img,pt_ctr,p1,[255,0,0],2)
 
+						#Print info
+						self.display_info(img, "ALIGN", distances, yaw)
 						#Return info
 						return arrow_info(status=STATUS_ALG.ALIGN, dst=distances, angle=yaw)
 					
 					else:
 						#TRACKING
+						#Print info
+						self.display_info(img, "TRACKING", distances)
 						#Return info
 						return arrow_info(status=STATUS_ALG.TRACKING, dst=distances )
 
@@ -241,7 +254,8 @@ class arrow:
 
 			#Return info
 			algo_man.img=img
-
+			#Print info
+			self.display_info(img, "TRACKING", distances)
 			return arrow_info(status=STATUS_ALG.TRACKING, dst=distances )
 
 		#KALMAN DEAD
@@ -254,5 +268,7 @@ class arrow:
 			#Update clever threshold
 			self.tresh.status=STAT_THR.DEF
 
+		#Print info
+		self.display_info(img)
 		#Default return	
 		return arrow_info(status=STATUS_ALG.KO)	

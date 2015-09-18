@@ -61,7 +61,7 @@ def angle(pts_A, pts_B ):
     else:
         print "non detection" 
 
-    return int(yaw)
+    return round(yaw,2)
 
 
 """
