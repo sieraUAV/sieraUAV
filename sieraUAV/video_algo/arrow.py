@@ -13,7 +13,7 @@ class arrow_info:
 		self.algo=ALGOS.ARROW
 		self.status=status
 		self.distances=dst
-		self.yaw=angle
+		self.angle=angle
 
 """
 Arrow detection algorytme

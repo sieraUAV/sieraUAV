@@ -36,7 +36,7 @@ threadCV.start()
 
 init_api()
 
-fsm=fsm_test(api, vehicle, (37.627182, -122.375425))
+fsm=fsm_test(api, vehicle, (37.624939, -122.389273))
 
 
 print "Waiting for video"

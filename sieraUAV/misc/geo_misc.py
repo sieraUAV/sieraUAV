@@ -6,6 +6,7 @@
 """
 
 from math import *
+import numpy as np 
 
 """
 Enable to get distances (x,y) between a point and the center of an image
@@ -130,3 +131,27 @@ def PCA(data, dims_rescaled_data=2):
     # carry out the transformation on the data using eigenvectors
     # and return the re-scaled data, eigenvalues, and eigenvectors
     return NP.dot(evecs.T, data.T).T, evals, evecs
+
+
+def angles_mean(angle_mean):
+
+	mean=0
+	minagl=min(angle_mean)
+	maxagl=max(angle_mean)
+	#Compute the angles average
+	if minagl<90 and maxagl>270:
+		for agl in angle_mean:
+			if agl<90 or agl>270:
+				agl=(90+agl)%360
+				mean+=agl
+			else:
+				return (True, None)
+
+		mean=(mean/len(angle_mean)-90)%360
+
+	elif (maxagl-minagl)<180:
+		mean=np.mean(angle_mean)
+	else:
+		return (True, None)
+
+	return (False, mean)
