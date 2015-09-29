@@ -86,6 +86,45 @@ def send_nav_velocity(velocity_x, velocity_y, velocity_z):
     vehicle.send_mavlink(msg)
     vehicle.flush()
 
+def send_servo( servo, stategates):
+    global api
+    global vehicle
+
+    # create the SET_POSITION_TARGET_LOCAL_NED command
+    # Check https://pixhawk.ethz.ch/mavlink/#SET_POSITION_TARGET_LOCAL_NED
+    # for info on the type_mask (0=enable, 1=ignore).
+    # Accelerations and yaw are ignored in GCS_Mavlink.pde at the
+    # time of writing.
+
+    msg=None
+
+    st_open2=1050
+    st_close=1500
+    st_open1=1950
+
+    #state
+    if stategates==1:
+        pwm=st_open1
+    elif stategates==0:
+        pwm=st_close
+    elif stategates==2:
+        pwm=st_open2
+    else:
+        pwm=st_close
+
+    msg = vehicle.message_factory.command_long_encode(
+        0, 0,                                   # target system, target component
+        mavutil.mavlink.MAV_CMD_DO_SET_SERVO,   #command
+        0,  #confirmation
+        servo,  #param 1
+        pwm,    #param 2
+        0, 0, 0, 0, 0)   
+
+    # send command to vehicle
+    vehicle.send_mavlink(msg)
+    vehicle.flush()
+
+
 # condition_yaw - send condition_yaw mavlink command to vehicle so it points at specified heading (in degrees)
 def condition_yaw(heading):
     global api
@@ -204,28 +243,6 @@ def tracking():
 
     return st_track
 
-#Mission start
-def mission():
-    global Q_RX
-    init_api()
-    #Takeoff
-    arm_and_takeoff()
-
-    #Attente de detection objet
-    boolVideoDet=False
-    while not boolVideoDet:
-        while not Q_RX.empty():
-            boolVideoDet= (Q_RX.get()[0]=='DETECT')
-
-    print "Target detected"
-
-    #INIT TRACKING
-    vehicle.mode    = VehicleMode("GUIDED")
-
-    #BEGIN TRACKING
-    while 1:
-        tracking()
-        time.sleep(0.1)
 
 #EXE MAIN
 # start video thread 
@@ -235,20 +252,32 @@ def mission():
 #    print "Error: unable to start thread"
 
 
-#Create thread
-threadCV = myThread(1, "threadCV",videoThread)
+# #Create thread
+# threadCV = myThread(1, "threadCV",videoThread)
 
-#start thread
-threadCV.start()
+# #start thread
+# threadCV.start()
 #Conect to api drone mavproxy
 init_api()
 
-#Execute mission
-mission()
+# #Execute mission
+# mission()
 
-#Attente fin thread video
-while threadCV.is_alive():
-    print vehicle.mode
-    time.sleep(0.1)
+# #Attente fin thread video
+# while threadCV.is_alive():
+#     print vehicle.mode
+#     time.sleep(0.1)
 
-threadCV.join()
+# threadCV.join()
+
+
+while 1:
+    print "servo 1"
+    send_servo(10,1)
+    time.sleep(2)
+    print "servo 0"
+    send_servo(10,0)
+    time.sleep(2)
+    print "servo 2"
+    send_servo(10,2)
+    time.sleep(2)
