@@ -58,15 +58,17 @@ class fsm_test:
 		self.alg_en=False
 		self.alignCounter=0
 
-		#Correctors PI
-		self.corr_x=Corr_PI(Kp=0.01, Ki=0.0001, Sats=(-1, 1) )
-		self.corr_y=Corr_PI(Kp=0.01, Ki=0.0001, Sats=(-1, 1) )
-
 		#ALIGN INFO
 		self.angles=list()
 
 		#TIMER
 		self.lst_time=None
+
+		#TRACKING
+		#timer act tracking
+		self.lst_time_track=None
+		#Freq for tracking wth goto (Hz)
+		self.freqTrk=2.
 
 	#STATES methodes
 	def st_init(self):
@@ -128,7 +130,7 @@ class fsm_test:
 				#Save detection point
 				self.WPDetec=(self.lat, self.lon)
 				#Init tracking
-				self.act_tracking(reset=True)
+				self.act_tracking()
 				#CHANGE ST
 				self.state=FSM_ST.ARROW_TRK
 
@@ -228,7 +230,7 @@ class fsm_test:
 				#Save detection point
 				self.WPDetec=(self.lat, self.lon)
 				#Init tracking
-				self.act_tracking(reset=True)
+				self.act_tracking()
 				#CHANGE ST
 				self.state=FSM_ST.ARROW_TRK
 
@@ -240,7 +242,7 @@ class fsm_test:
 				#Save detection point
 				self.WPDetec=(self.lat, self.lon)
 				#Init tracking
-				self.act_tracking(reset=True)
+				self.act_tracking()
 				#CHANGE ST
 				self.state=FSM_ST.SQUR_TRK
 
@@ -285,22 +287,34 @@ class fsm_test:
 		self.vehicle.flush()
 
 
-	def act_tracking(self, reset=False):
-		#Reset corrector if needed
-		if reset:
-			self.corr_x.reset()
-			self.corr_y.reset()
+	def act_tracking(self):
 
-		#Compute speeds commands in UAV base
-		(err_x, err_y)= self.msg.distances
-		Vxd=self.corr_x.run(err_x)
-		Vyd=self.corr_y.run(err_y)
+		if self.lst_time_track==None:
+			timer=1/self.freqTrk+0.1
+		else:
+			timer=time.time()-self.lst_time_track
 
-		#Change of base: UAV --> earth
-		(Vxa, Vya)=chg_base_abs(Vxd, Vyd, self.yaw)
+		if timer>(1/self.freqTrk) :
+			#Save current time for timer
+			self.lst_time_track=time.time()
 
-		#Send commands to UAV
-		self.send_nav_velocity(Vya, Vxa , 0)
+			#Camera def
+			angl_viewH= 75.7*pi/180.
+			angl_viewV= 66.*pi/180.
+
+			#Compute position corection (UAV base)
+			(err_x_rt, err_y_rt)= self.msg.distances
+			dsterrXd= (angl_viewH*err_x_rt)*self.alt
+			dsterrYd= (angl_viewV*err_y_rt)*self.alt
+
+			#Change of base: UAV --> earth
+			(dsterrXa, dsterrYa)=chg_base_abs(dsterrXd, dsterrYd, self.yaw)
+			#Compute new Waypoint for track
+			poscmd=mavextra.gps_offset(self.lat, self.lon, dsterrXa, dsterrYa )
+
+			#Send commands to UAV
+			self.act_nav_goto(poscmd)
+
 
 	def act_get_angle(self):
 		if self.msg.status==STATUS_ALG.ALIGN:

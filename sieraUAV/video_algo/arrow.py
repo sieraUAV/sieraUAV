@@ -196,6 +196,7 @@ class arrow:
 					algo_man.img=img
 
 					distances=interdistance((xk,yk),cols,rows)
+					dst_ratio=(float(distances[0])/cols, float(distances[1])/rows)
 
 					#Test if we are align
 					(distX,distY)=distances
@@ -214,14 +215,14 @@ class arrow:
 						#Print info
 						self.display_info(img, "ALIGN", distances, yaw)
 						#Return info
-						return arrow_info(status=STATUS_ALG.ALIGN, dst=distances, angle=yaw)
+						return arrow_info(status=STATUS_ALG.ALIGN, dst=dst_ratio, angle=yaw)
 					
 					else:
 						#TRACKING
 						#Print info
 						self.display_info(img, "TRACKING", distances)
 						#Return info
-						return arrow_info(status=STATUS_ALG.TRACKING, dst=distances )
+						return arrow_info(status=STATUS_ALG.TRACKING, dst=dst_ratio )
 
 
 				else:
@@ -250,13 +251,13 @@ class arrow:
 			cv2.circle(img,(x,y),4,(0,255,0),-1)
 
 			distances=interdistance((x,y),cols,rows)
-
+			dst_ratio=(float(distances[0])/cols, float(distances[1])/rows)
 
 			#Return info
 			algo_man.img=img
 			#Print info
 			self.display_info(img, "TRACKING", distances)
-			return arrow_info(status=STATUS_ALG.TRACKING, dst=distances )
+			return arrow_info(status=STATUS_ALG.TRACKING, dst=dst_ratio )
 
 		#KALMAN DEAD
 		else:
