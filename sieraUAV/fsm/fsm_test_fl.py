@@ -342,16 +342,21 @@ class fsm_test:
 		if ret:
 			print "ERROR BAD ANGLES"
 		else:
+			#Save current WP
+			currWP= (self.lat, self.lon)
 			#Get WP target
 			self.WPTarget=mavextra.gps_newpos(self.lat, self.lon, bearing, 30)
 			#Goto to target 
-			print "Wait to go"
-			time.sleep(2)
 			self.act_nav_goto(self.WPTarget)
-			time.sleep(2)
-			self.act_nav_goto(self.WPTarget)
-			time.sleep(2)
-			self.act_nav_goto(self.WPTarget)
+			time.sleep(3)
+
+			currpos=(self.vehicle.location.lat, self.vehicle.location.lon)
+			while get_dst_2WP(currWP, currpos) < 3:
+				print "Retry to send cmd"
+				self.act_nav_goto(self.WPTarget)
+				time.sleep(3)
+				currpos=(self.vehicle.location.lat, self.vehicle.location.lon)
+
 			dstDtar=get_dst_2WP(self.WPTarget, (self.lat, self.lon))
 			print "Distance to target %d m" % int(dstDtar)
 			#Reset angle list
