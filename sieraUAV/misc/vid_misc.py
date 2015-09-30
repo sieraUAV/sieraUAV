@@ -16,7 +16,7 @@ COLOR= enum('RED','YELLOW')
 Adaptive threshold in function of a point
 """
 class clever_thresh:
-	def __init__( self, V_per=20, S_per=20, vec_val_per=8, color=COLOR.RED ):
+	def __init__( self, V_per=20, S_per=10, vec_val_per=8, color=COLOR.RED ):
 		self.V_per=V_per
 		self.S_per=S_per
 		self.vec_val_per=vec_val_per
@@ -28,10 +28,10 @@ class clever_thresh:
 		self.HSV_pt_val_old=None
 
 		#COLOR VECTOR
-		self.default_red= (0., 50., 10.)
+		self.default_red= (158., 20., 125.)
 		self.default_yellow= (28., 50., 10.)
 		self.maxS=230.
-		self.maxV=230.
+		self.maxV=255.
 		self.minS=5.
 		self.minV=5.
 

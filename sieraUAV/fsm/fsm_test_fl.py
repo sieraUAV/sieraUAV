@@ -68,12 +68,13 @@ class fsm_test:
 		#timer act tracking
 		self.lst_time_track=None
 		#Freq for tracking wth goto (Hz)
-		self.freqTrk=2.
+		self.freqTrk=1
 
 	#STATES methodes
 	def st_init(self):
 		#Transition INIT-->TAKEOFF
-		if self.fix >= GPS_FX.FX_3D and self.alt<=0.1 and self.alt>=-0.1:
+		print "altitute:",self.alt
+		if self.fix >= GPS_FX.FX_3D and self.alt<=0.5 and self.alt>=-0.5:
 			#ACTION
 			#Save WP
 			self.WPlist=[ (self.lat, self.lon) ]
@@ -111,7 +112,7 @@ class fsm_test:
 	def st_nav(self):
 
 		#Transition NAV-->NAV
-		if self.distWP>7 and not self.alg_en:
+		if self.distWP>10 and not self.alg_en:
 			#ACTION
 			#Activate arrow algo
 			Q_TX.put_bis(ALGOS.ARROW)
@@ -137,7 +138,7 @@ class fsm_test:
 
 	def st_arrow_trk(self):
 		#Transition ARROW_TRK-->ARROW_ALIGN
-		if self.alignCounter>10:
+		if self.alignCounter>5:
 			#ACTION
 			self.alignCounter=0
 			#CHANGE ST
@@ -172,7 +173,7 @@ class fsm_test:
 
 	def st_arrow_algn(self):
 		#Transition ARROW_ALIGN-->SQUR_SRCH
-		if len(self.angles)>20:
+		if len(self.angles)>5:
 			#ACTION
 			#goto WP with angle
 			self.act_goto_wt_angle()
@@ -272,8 +273,10 @@ class fsm_test:
 
 		time.sleep(0.1)
 		print "Waiting for arming cycle completes..."
-		while not self.vehicle.armed and not self.api.exit:
-			time.sleep(0.5)
+		while not self.vehicle.armed :
+			time.sleep(5)
+			self.vehicle.armed   = True
+			self.vehicle.flush()
 
 		print "Taking off!"
 		self.vehicle.commands.takeoff(self.tg_alt) # Take off to target altitude
@@ -285,7 +288,7 @@ class fsm_test:
 		loc=Location(gt_lat, gt_lon, self.tg_alt, is_relative=True)
 		self.vehicle.commands.goto(loc)
 		self.vehicle.flush()
-
+		
 
 	def act_tracking(self):
 
@@ -342,6 +345,12 @@ class fsm_test:
 			#Get WP target
 			self.WPTarget=mavextra.gps_newpos(self.lat, self.lon, bearing, 30)
 			#Goto to target 
+			print "Wait to go"
+			time.sleep(2)
+			self.act_nav_goto(self.WPTarget)
+			time.sleep(2)
+			self.act_nav_goto(self.WPTarget)
+			time.sleep(2)
 			self.act_nav_goto(self.WPTarget)
 			dstDtar=get_dst_2WP(self.WPTarget, (self.lat, self.lon))
 			print "Distance to target %d m" % int(dstDtar)

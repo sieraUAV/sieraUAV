@@ -71,6 +71,7 @@ class algo_process:
 		self.rows=rows
 
 	def read(self):
+		self.capture.read()
 		ret, Retimg = self.capture.read()
 		
 		if ret:

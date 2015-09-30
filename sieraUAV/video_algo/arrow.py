@@ -121,7 +121,7 @@ class arrow:
 		cnt_filt=[]
 		for cnt in contours:
 			CurrAera=cv2.contourArea(cnt)
-			if CurrAera>1500 :  # remove small areas like noise etc
+			if CurrAera>1000 :  # remove small areas like noise etc
 				#hull = cv2.convexHull(cnt)    # find the convex hull of contour
 				hull = cv2.approxPolyDP(cnt,0.02*cv2.arcLength(cnt,True),True)
 				approx = cv2.convexHull(cnt)
@@ -180,7 +180,7 @@ class arrow:
 
 					if ret_corr:
 						#Update clever thresh
-						self.tresh.compute_HSV_pt(cnt_filt[0][1], imgHSV2, img, (cnt_filt[0][0]*0.03)**0.5)
+						self.tresh.compute_HSV_pt(cnt_filt[0][1], imgHSV2, img, (cnt_filt[0][0]*0.02)**0.5)
 						##Paint rest of info##
 						#Detection barycenter
 						cv2.circle(img,cnt_filt[0][2],4,(255,0,0),-1)
