@@ -32,7 +32,7 @@ def test_th():
 			ret_com=arrow_algo.processing(manAlgo)
 			Q_RX.put_bis(ret_com)
 		elif ALGO_SELEC==ALGOS.BLK_SQUR:
-			ret_com=arrow_algo.processing(manAlgo)
+			ret_com=blk_sqr_algo.processing(manAlgo)
 			Q_RX.put_bis(ret_com)
 		else:
 			print "ERROR: BAD VIDEO ALGO"

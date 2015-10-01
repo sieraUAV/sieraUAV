@@ -10,7 +10,7 @@ from pymavlink import mavutil
 import sys
 
 sys.path.append('./')
-from fsm.fsm_test_fl import *
+from fsm.fsm_mis_arr import *
 from testalgo import test_th
 from misc.th_misc import *
 
@@ -36,7 +36,7 @@ threadCV.start()
 
 init_api()
 
-fsm=fsm_test(api, vehicle, (48.789222, 2.028945 ),7)
+fsm=fsm_test(api, vehicle, (37.625266, -122.388867 ),7)
 
 
 print "Waiting for video"

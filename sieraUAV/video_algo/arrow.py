@@ -64,13 +64,13 @@ class arrow:
 
 	def display_info(self, img, state="KO", dst=None, angle=None):
 
-		string= "Tracking informations: %s" % state
+		string= "Tracking informations: ARROW %s" % state
 
 		if dst!=None:
 			string+= ", Position error: x=%d y=%d" % dst
 
 		if angle!=None:
-			string+= ", Arrow angle: %d" % int(angle)
+			string+= ", angle: %d" % int(angle)
 
 		#Print info on img
 		cv2.putText(img,string, (5,15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (10,255,10),1)
@@ -119,9 +119,11 @@ class arrow:
 		#Filtrage de contour
 		#init list element filtre
 		cnt_filt=[]
+		#Max aera
+		MaxAera=cols*rows
 		for cnt in contours:
 			CurrAera=cv2.contourArea(cnt)
-			if CurrAera>1000 :  # remove small areas like noise etc
+			if CurrAera>1000 and CurrAera<(0.25*MaxAera):  # remove small areas like noise etc
 				#hull = cv2.convexHull(cnt)    # find the convex hull of contour
 				hull = cv2.approxPolyDP(cnt,0.02*cv2.arcLength(cnt,True),True)
 				approx = cv2.convexHull(cnt)

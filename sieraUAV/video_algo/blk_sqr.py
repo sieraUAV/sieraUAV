@@ -10,7 +10,7 @@ Return information about arrow detection algorytme
 """
 class blk_sqr_info:
 	def __init__(self, status=STATUS_ALG.KO, dst=None, angle=None ):
-		self.algo=ALGOS.ARROW
+		self.algo=ALGOS.BLK_SQUR
 		self.status=status
 		self.distances=dst
 
@@ -23,7 +23,7 @@ class blk_sqr:
 
 		#VAR POUR FILTRAGE
 		self.countDeadDetect=0
-		self.arrowK=kalman2D(alive=False)
+		self.blk_sqrK=kalman2D(alive=False)
 
 		#Presision pour le statut ALIGN
 		self.align_pres=align_pres
@@ -62,13 +62,11 @@ class blk_sqr:
 
 	def display_info(self, img, state="KO", dst=None, angle=None):
 
-		string= "Tracking informations: %s" % state
+		string= "Tracking informations: SQUARE %s" % state
 
 		if dst!=None:
 			string+= ", Position error: x=%d y=%d" % dst
 
-		if angle!=None:
-			string+= ", Arrow angle: %d" % int(angle)
 
 		#Print info on img
 		cv2.putText(img,string, (5,15), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (10,255,10),1)
@@ -88,6 +86,8 @@ class blk_sqr:
 		#GRAY img
 		gray = cv2.cvtColor(img,cv2.COLOR_BGR2GRAY)
 
+		MIN_LIGHT=0
+		MAX_LIGHT=45
 		#Threshold gray
 		gray_bin=cv2.inRange(gray,MIN_LIGHT,MAX_LIGHT)
 	 	
@@ -95,7 +95,7 @@ class blk_sqr:
 	 	algo_man.imgTresh=np.array(gray_bin)
 
 		#close function (effacer les trous)
-		kernel = np.ones((7	,7),np.uint8)
+		kernel = np.ones((5	,5),np.uint8)
 		closing = cv2.morphologyEx(gray_bin, cv2.MORPH_CLOSE, kernel)
 		 
 		#contour
@@ -108,22 +108,23 @@ class blk_sqr:
 			CurrAera=cv2.contourArea(cnt)
 			if CurrAera>1500 :  # remove small areas like noise etc
 				#hull = cv2.convexHull(cnt)    # find the convex hull of contour
-				hull = cv2.approxPolyDP(cnt,0.02*cv2.arcLength(cnt,True),True)
-				approx = cv2.convexHull(cnt)
+				hull = cv2.approxPolyDP(cnt,0.10*cv2.arcLength(cnt,True),True)
+				cv2.drawContours(img,[hull],0,(0,0,255),2)
 				#if len(hull)==12:
 				if cv2.isContourConvex(hull) and len(hull)==4:
 					m = cv2.moments(hull)
 					if m['m00'] !=0:
 						barycentre=(int(m['m10']/m['m00']),int(m['m01']/m['m00']))
 						cv2.drawContours(img,[hull],0,(0,0,255),2)
-
-						cv2.circle(img,barycentre_2,4,(255,0,255),-1)
 						#register info 
 						cnt_filt.append((CurrAera, barycentre, hull))
 
 
 		#trie des contour filtre par aire les plus grandre
 		cnt_filt.sort(reverse=True)
+
+				#Update with algo management class
+		algo_man.img=img
 
 		#DETECTION
 		if len(cnt_filt)>0:
@@ -136,22 +137,22 @@ class blk_sqr:
 			else:
 				self.countDeadDetect-=1
 
-			(xd,yd)=cnt_filt[0][2]
+			(xd,yd)=cnt_filt[0][1]
 
 
 			#Update kalman if we need (after 5 detection)
 			if self.countDeadDetect<=-3:
 				#KALMAN
-				if not self.arrowK.alive:
-					self.arrowK.__init__(xd, yd , True, m_noise_cov=1e-3	, dst_des=rows*0.20 )
+				if not self.blk_sqrK.alive:
+					self.blk_sqrK.__init__(xd, yd , True, m_noise_cov=1e-3	, dst_des=rows*0.20 )
 
-			if self.arrowK.alive:
+			if self.blk_sqrK.alive:
 				#Correct kalman 
-				(xk,yk,ret_corr)=self.arrowK.correct(xd,yd)
+				(xk,yk,ret_corr)=self.blk_sqrK.correct(xd,yd)
 				cv2.circle(img,(xk,yk),4,(0,255,0),-1)
 
 				#If correction sucess
-				if self.arrowK.track :
+				if self.blk_sqrK.track :
 
 					ptx=(xk,rows/2)
 					pty=(cols/2,yk)
@@ -166,7 +167,7 @@ class blk_sqr:
 						#Detection contour
 						cv2.drawContours(img,[cnt_filt[0][2]],0,(0,255,0),2)
 						#Validation circle
-						cv2.circle(img,(xk,yk),int(self.arrowK.dst_des),(0,0,255),1)
+						cv2.circle(img,(xk,yk),int(self.blk_sqrK.dst_des),(0,0,255),1)
 
 
 
@@ -185,32 +186,28 @@ class blk_sqr:
 						#Print info
 						self.display_info(img, "ALIGN", distances)
 						#Return info
-						return arrow_info(status=STATUS_ALG.ALIGN, dst=dst_ratio)
+						return blk_sqr_info(status=STATUS_ALG.ALIGN, dst=dst_ratio)
 					
 					else:
 						#TRACKING
 						#Print info
 						self.display_info(img, "TRACKING", distances)
 						#Return info
-						return arrow_info(status=STATUS_ALG.TRACKING, dst=dst_ratio )
+						return blk_sqr_info(status=STATUS_ALG.TRACKING, dst=dst_ratio )
 
 
 				else:
 					#Update img of algo management
 					algo_man.img=img
 
-			else:
-				#if not tracking --> return to basic tresh
-				self.tresh.status=STAT_THR.DEF
-
 		#PREDICTION
-		elif self.countDeadDetect<10 and self.arrowK.track:
+		elif self.countDeadDetect<10 and self.blk_sqrK.track:
 
 			#Increment counter
 			self.countDeadDetect+=1
 
 			#Get prediction point
-			(x,y)=self.arrowK.predict()
+			(x,y)=self.blk_sqrK.predict()
 
 			#print prediction point
 			cv2.circle(img,(x,y),4,(0,255,0),-1)
@@ -222,11 +219,11 @@ class blk_sqr:
 			algo_man.img=img
 			#Print info
 			self.display_info(img, "TRACKING", distances)
-			return arrow_info(status=STATUS_ALG.TRACKING, dst=dst_ratio )
+			return blk_sqr_info(status=STATUS_ALG.TRACKING, dst=dst_ratio )
 
 		#KALMAN DEAD
 		else:
-			self.arrowK.alive=False
+			self.blk_sqrK.alive=False
 
 			#Return info
 			algo_man.img=img
@@ -235,4 +232,4 @@ class blk_sqr:
 		#Print info
 		self.display_info(img)
 		#Default return	
-		return arrow_info(status=STATUS_ALG.KO)	
+		return blk_sqr_info(status=STATUS_ALG.KO)	

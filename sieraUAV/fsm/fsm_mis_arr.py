@@ -53,6 +53,7 @@ class fsm_test:
 		self.WPlist= None
 		self.WPDetec=None
 		self.WPTarget=None
+		self.lstWP_loc=None
 
 		#State of video processing
 		self.alg_en=False
@@ -111,7 +112,7 @@ class fsm_test:
 
 	def st_nav(self):
 
-		#Transition NAV-->NAV
+		#Transition NAV-->NAV (activate algo)
 		if self.distWP>10 and not self.alg_en:
 			#ACTION
 			#Activate arrow algo
@@ -121,6 +122,25 @@ class fsm_test:
 			print "Distance from WP: ", self.distWP
 			#CHANGE ST
 			self.state=FSM_ST.NAV
+
+		#Transition NAV-->NAV (return to last wp)
+		elif get_dst_2WP(self.WPTarget, (self.lat, self.lon))<1:
+			#ACTION
+			#Go to last wp
+			self.act_nav_goto(self.lstWP_loc)
+			time.sleep(2)
+			#CHANGE ST
+			self.state=FSM_ST.NAV
+
+		#Transition NAV-->NAV (return to target)
+		elif self.distWP<1 and self.alg_en==True:
+			#ACTION
+			#Go to last wp
+			self.act_nav_goto(self.WPTarget)
+			time.sleep(2)
+			#CHANGE ST
+			self.state=FSM_ST.NAV
+
 
 		elif self.fl_nw_msg:
 			self.fl_nw_msg=False
@@ -175,11 +195,13 @@ class fsm_test:
 		#Transition ARROW_ALIGN-->SQUR_SRCH
 		if len(self.angles)>5:
 			#ACTION
+			#Save WP
+			self.WPlist.append( (self.lat, self.lon) )
 			#goto WP with angle
 			self.act_goto_wt_angle()
 
 			#ACtivate Black square algo
-			#Q_TX.put_bis(ALGOS.BLK_SQUR)
+			Q_TX.put_bis(ALGOS.BLK_SQUR)
 			#Reset list
 			self.angles=list()
 			#CHANGE ST
@@ -213,10 +235,27 @@ class fsm_test:
 
 	def st_squr_srch(self):
 
-		if self.fl_nw_msg:
+		#Transition SQUR_SRCH-->SQUR_SRCH (return to last wp)
+		if get_dst_2WP(self.WPTarget, (self.lat, self.lon))<1:
+			#ACTION
+			#Go to last wp
+			self.act_nav_goto(self.lstWP_loc)
+			#CHANGE ST
+			self.state=FSM_ST.SQUR_SRCH
+
+		#Transition SQUR_SRCH-->SQUR_SRCH (return to target)
+		elif self.distWP<1:
+			#ACTION
+			#Go to target wp
+			self.act_nav_goto(self.WPTarget)
+			time.sleep(2)
+			#CHANGE ST
+			self.state=FSM_ST.SQUR_SRCH
+
+		elif self.fl_nw_msg:
 			self.fl_nw_msg=False
 
-			#Transition SQR_srch-->squr_trk
+			#Transition SQR_srch-->SQUR_TRK
 			if self.msg.algo==ALGOS.BLK_SQUR and self.msg.status!=STATUS_ALG.KO:
 				#ACTION
 				#Save detection point
@@ -250,7 +289,7 @@ class fsm_test:
 				#tracking
 				self.act_tracking()
 				#CHANGE ST
-				self.state=FSM_ST.ARROW_TRK
+				self.state=FSM_ST.SQUR_TRK
 
 			#Transition SQUR_TRK-->RECOVER
 			elif self.msg.algo==ALGOS.ARROW and self.msg.status==STATUS_ALG.KO:
@@ -396,14 +435,7 @@ class fsm_test:
 			self.WPTarget=mavextra.gps_newpos(self.lat, self.lon, bearing, 30)
 			#Goto to target 
 			self.act_nav_goto(self.WPTarget)
-			time.sleep(3)
-
-			currpos=(self.vehicle.location.lat, self.vehicle.location.lon)
-			while get_dst_2WP(currWP, currpos) < 3:
-				print "Retry to send cmd"
-				self.act_nav_goto(self.WPTarget)
-				time.sleep(3)
-				currpos=(self.vehicle.location.lat, self.vehicle.location.lon)
+			time.sleep(2)
 
 			dstDtar=get_dst_2WP(self.WPTarget, (self.lat, self.lon))
 			print "Distance to target %d m" % int(dstDtar)
@@ -484,8 +516,8 @@ class fsm_test:
 
 		#get distance from the last WP
 		if self.WPlist!=None:
-			lstWP_loc= self.WPlist[len(self.WPlist)-1]
-			self.distWP=get_dst_2WP(lstWP_loc, (self.lat, self.lon))
+			self.lstWP_loc= self.WPlist[len(self.WPlist)-1]
+			self.distWP=get_dst_2WP(self.lstWP_loc, (self.lat, self.lon))
 
 		#Update msg from queues	
 		(self.fl_nw_msg, self.msg)= Q_RX.get_bis()
