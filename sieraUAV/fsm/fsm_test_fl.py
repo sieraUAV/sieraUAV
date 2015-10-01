@@ -177,6 +177,9 @@ class fsm_test:
 			#ACTION
 			#goto WP with angle
 			self.act_goto_wt_angle()
+
+			#ACtivate Black square algo
+			#Q_TX.put_bis(ALGOS.BLK_SQUR)
 			#Reset list
 			self.angles=list()
 			#CHANGE ST
@@ -209,10 +212,55 @@ class fsm_test:
 
 
 	def st_squr_srch(self):
-		pass
+
+		if self.fl_nw_msg:
+			self.fl_nw_msg=False
+
+			#Transition SQR_srch-->squr_trk
+			if self.msg.algo==ALGOS.BLK_SQUR and self.msg.status!=STATUS_ALG.KO:
+				#ACTION
+				#Save detection point
+				self.WPDetec=(self.lat, self.lon)
+				#Init tracking
+				self.act_tracking()
+				#CHANGE ST
+				self.state=FSM_ST.SQUR_TRK
 
 	def st_squr_trk(self):
-		pass
+		#Transition SQUR_TRK-->LAND
+		if self.alignCounter>5:
+			#ACTION
+			self.alignCounter=0
+			#change mode to land
+			self.vehicle.mode    = VehicleMode("LAND")
+			#CHANGE ST
+			self.state=FSM_ST.LAND
+
+		elif self.fl_nw_msg:
+			self.fl_nw_msg=False
+
+			#Transition SQUR_TRK-->SQUR_TRK
+			if self.msg.algo==ALGOS.BLK_SQUR and self.msg.status!=STATUS_ALG.KO:
+				#ACTION
+				#Count align msg
+				if self.msg.status==STATUS_ALG.ALIGN:
+					self.alignCounter+=1
+				else:
+					self.alignCounter=0
+				#tracking
+				self.act_tracking()
+				#CHANGE ST
+				self.state=FSM_ST.ARROW_TRK
+
+			#Transition SQUR_TRK-->RECOVER
+			elif self.msg.algo==ALGOS.ARROW and self.msg.status==STATUS_ALG.KO:
+				#ACTION
+				#Goto to last detection WP
+				self.act_nav_goto(self.WPDetec)
+				#Start timer
+				self.lst_time=time.time()
+				#CHANGE ST
+				self.state=FSM_ST.RECOVER
 
 	def st_land(self):
 		pass
