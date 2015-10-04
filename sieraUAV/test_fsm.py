@@ -10,7 +10,8 @@ from pymavlink import mavutil
 import sys
 
 sys.path.append('./')
-from fsm.fsm_mis_arr import *
+#from fsm.fsm_mis_arr import *
+from fsm.fsm_test_cr import *
 from testalgo import test_th
 from misc.th_misc import *
 

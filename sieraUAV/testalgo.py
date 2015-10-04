@@ -6,6 +6,7 @@
 from video_algo.algo_manage import *
 from video_algo.arrow import *
 from video_algo.blk_sqr import *
+from video_algo.cross import *
 from misc.misc import *
 from misc.th_misc import Q_TX, Q_RX
 import time
@@ -13,7 +14,7 @@ import time
 def test_th():
 
 	manAlgo=algo_process()
-	arrow_algo=arrow()
+	cross_algo=cross()
 	blk_sqr_algo=blk_sqr()
 	ALGO_SELEC=ALGOS.NONE
 
@@ -34,6 +35,9 @@ def test_th():
 		elif ALGO_SELEC==ALGOS.BLK_SQUR:
 			ret_com=blk_sqr_algo.processing(manAlgo)
 			Q_RX.put_bis(ret_com)
+		elif ALGO_SELEC==ALGOS.CROSS:
+			ret_com=cross_algo.processing(manAlgo)
+			Q_RX.put_bis(ret_com)		
 		else:
 			print "ERROR: BAD VIDEO ALGO"
 			time.sleep(0.1)

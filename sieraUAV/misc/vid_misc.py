@@ -28,6 +28,7 @@ class clever_thresh:
 		self.HSV_pt_val_old=None
 
 		#COLOR VECTOR
+		#Valeur par default: (valeur_def_couleur, min_def_saturation, min_def_valeur)
 		self.default_red= (158., 20., 125.)
 		self.default_yellow= (28., 50., 10.)
 		self.maxS=230.
@@ -44,7 +45,7 @@ class clever_thresh:
 			if self.color==COLOR.RED:
 				imgTresh=self.color_th_pt(self.HSV_pt_val, self.default_red, imgHSV)
 			elif self.color==COLOR.YELLOW:
-				imgTresh=self.color_th_def(self.HSV_pt_val, self.default_yellow, imgHSV)
+				imgTresh=self.color_th_pt(self.HSV_pt_val, self.default_yellow, imgHSV)
 			
 			if imgTresh==None:
 				self.status=STAT_THR.DEF

@@ -272,6 +272,7 @@ class fsm_test:
 			self.alignCounter=0
 			#change mode to land
 			self.vehicle.mode    = VehicleMode("LAND")
+			self.vehicle.flush()
 			#CHANGE ST
 			self.state=FSM_ST.LAND
 

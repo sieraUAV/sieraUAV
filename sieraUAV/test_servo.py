@@ -19,6 +19,11 @@ def init_api():
     global vehicle
     api= local_connect()
     vehicle = api.get_vehicles()[0]
+    vehicle.set_mavlink_callback(mavrx_debug_handler)
+
+
+def mavrx_debug_handler(message):
+    print "Received", message
 
 def arm_and_takeoff():
     global api

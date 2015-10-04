@@ -12,7 +12,7 @@ from misc.misc import enum
 
 #ENUM
 ALGOS=enum('NONE','ARROW','CROSS','BLK_SQUR')
-STATUS_ALG= enum('KO','TRACKING','ALIGN')
+STATUS_ALG= enum('KO','TRACKING','ALIGN', 'DROPPING')
 
 #CLASS
 
